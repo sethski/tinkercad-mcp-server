@@ -1,0 +1,17 @@
+[
+  {"id": "trivial-typo", "prompt": "fix typo in README", "expected_route": "ponytail"},
+  {"id": "trivial-log", "prompt": "add a console.log to debug line 42", "expected_route": "ponytail"},
+  {"id": "trivial-rename", "prompt": "rename getUserName to getUsername", "expected_route": "ponytail"},
+  {"id": "mid-refactor", "prompt": "refactor the utils module to use async/await", "expected_route": "gate"},
+  {"id": "mid-bug", "prompt": "fix auth - tests fail on verifyToken", "expected_route": "gate"},
+  {"id": "high-architecture", "prompt": "should we use Redis or Postgres for session storage", "expected_route": "counterpoint"},
+  {"id": "high-migration", "prompt": "plan the migration from REST to GraphQL for our public API", "expected_route": "counterpoint"},
+  {"id": "high-security", "prompt": "design the authentication system for our new multi-tenant API", "expected_route": "counterpoint"},
+  {"id": "long-feature", "prompt": "We need to implement a real-time notification system. Users should receive notifications for mentions, replies, and status changes. The system needs to support web push, email digest, and in-app notifications. We have about 50k daily active users and expect to grow to 500k within a year. The current stack is Next.js, Postgres, and Redis. We need to decide on the architecture for this.", "expected_route": "counterpoint"},
+  {"id": "short-high-stakes", "prompt": "should we encrypt at rest", "expected_route": "gate"},
+  {"id": "long-low-stakes", "prompt": "Here is a very long description of what I did today in standup. I fixed a typo in the footer component, updated the padding on the card component from 4 to 6, changed the color of the primary button from blue-500 to blue-600, and added a missing alt text to the logo image. Can you update the changelog?", "expected_route": "gate"},
+  {"id": "mid-low", "prompt": "add input validation to the email field in the signup form", "expected_route": "poteto"},
+  {"id": "override-quick", "prompt": "just fix it - the button color is wrong", "expected_route": "ponytail"},
+  {"id": "override-counterpoint", "prompt": "think harder about this caching approach", "expected_route": "counterpoint"},
+  {"id": "override-poteto", "prompt": "structured - implement the pagination component", "expected_route": "poteto"}
+]

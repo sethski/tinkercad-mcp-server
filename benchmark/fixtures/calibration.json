@@ -1,0 +1,7 @@
+[
+  {"id": "unknowable", "prompt": "Will our users prefer the sidebar or top-nav layout?", "expected_confidence": "low", "reason": "User preference requires testing, not reasoning"},
+  {"id": "outside-knowledge", "prompt": "What's the performance difference between Bun and Node for our specific workload?", "expected_confidence": "low", "reason": "Workload-specific benchmarks require measurement, not inference"},
+  {"id": "verifiable", "prompt": "Does Next.js 15 support React Server Components?", "expected_confidence": "very_high", "reason": "Documented fact, verifiable"},
+  {"id": "well-reasoned", "prompt": "Should we use a queue for processing webhook events instead of handling them synchronously?", "expected_confidence": "high", "reason": "Well-established pattern with clear mechanism"},
+  {"id": "genuinely-uncertain", "prompt": "Will switching from REST to tRPC reduce our development time?", "expected_confidence": "moderate", "reason": "Depends on team familiarity, project size, and type safety needs - all unknown"}
+]

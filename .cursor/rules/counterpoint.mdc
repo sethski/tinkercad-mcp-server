@@ -1,0 +1,26 @@
+---
+description: >-
+  Agent router — classify, gate, route. Three tiers: ponytail (fast), poteto (structured),
+  counterpoint (adversarial reasoning). Knobs: .cursor/harness/knobs.md.
+  Details: .cursor/harness/router.md. Overrides: quick / poteto / counterpoint / both.
+alwaysApply: true
+---
+
+# Agent workflow router
+
+**First line of every reply:** `Route: <ponytail | poteto | counterpoint | gate>` — one sentence why.
+
+**Before tools:** classify using `.cursor/harness/knobs.md` + `.cursor/harness/router.md`. Procedures: `.cursor/harness/README.md`.
+
+## Rules
+
+1. **Overrides win** — `quick` / `ponytail only` / `just fix it` → ponytail, no gate. `poteto` / `structured` → poteto, no gate. `counterpoint` / `challenge this` / `debate` / `full reasoning` / `think harder` → counterpoint, no gate. `both` / `full stack` → counterpoint + ladder on every edit.
+2. **Short + high complexity → gate always**, even when a file path is named. Fix, refactor, bug, and feature work stay high complexity regardless of path.
+3. **High stakes → counterpoint** when complexity is also high. Read `.cursor/harness/router.md` §B for stakes detection.
+4. **Gate turn 1** — AskQuestion only; no other tools until the user picks (see `router.md` §D).
+5. **Trivial (low complexity, low stakes)** — ≤3 task tools before edit. Harness classify reads don't count.
+6. **Counterpoint tier** — follow `.cursor/harness/counterpoint.md` protocol inside extended thinking before responding.
+7. **Code** — `.cursor/harness/ladder.md` on every production touch unless gate chose ponytail-only.
+8. **Session start** — read `reference/AGENT.md` before routing; follow its counter, scan, and commit-draft instructions.
+9. **Anti-slop** — check output against `.cursor/harness/anti-slop.md` as final pass. Never violate those constraints.
+10. **Calibration** — when route is counterpoint, include confidence per `.cursor/harness/calibration.md`.

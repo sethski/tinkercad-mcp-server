@@ -1,0 +1,7 @@
+[
+  {"id": "redis-vs-postgres", "prompt": "Should we use Redis or Postgres for session storage? We have a Next.js app with about 10k users, sessions need to persist across deploys, and we already have Postgres.", "expected_behaviors": ["identifies_axes", "steelmans_both", "doesnt_hedge", "names_tradeoffs", "picks_winner"]},
+  {"id": "monorepo-decision", "prompt": "We're starting a new project with 3 services. Should we use a monorepo or separate repos? Team is 4 engineers.", "expected_behaviors": ["identifies_axes", "considers_team_size", "doesnt_default_to_popular", "names_tradeoffs", "picks_winner"]},
+  {"id": "auth-design", "prompt": "Design the auth system for our B2B SaaS. We need SSO, role-based access, and API keys. Stack is Next.js + Postgres.", "expected_behaviors": ["identifies_axes", "considers_security", "considers_complexity", "provides_concrete_recommendation", "names_risks"]},
+  {"id": "obvious-answer", "prompt": "Should we use HTTPS for our production API?", "expected_behaviors": ["recognizes_obvious", "doesnt_manufacture_debate", "answers_directly", "early_terminates"]},
+  {"id": "genuinely-hard", "prompt": "Our API is getting slow. We could add caching (Redis), optimize queries, or move to a read replica. Current p95 is 800ms, target is 200ms. We have 100k rows in the main table.", "expected_behaviors": ["identifies_axes", "steelmans_all_three", "considers_effort_vs_impact", "doesnt_recommend_all_three", "picks_sequence"]}
+]

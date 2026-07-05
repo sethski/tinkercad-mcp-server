@@ -1,0 +1,27 @@
+# Dependencies and build artifacts
+node_modules/
+dist/
+.next/
+*.lock
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE (except .cursor which IS the product)
+.idea/
+.vscode/
+
+# Reference clones (local only)
+_reference/
+
+# Metrics (personal session data)
+reference/metrics/sessions.jsonl
+reference/metrics/state.md
+reference/metrics/pending-commit.md
+
+# Benchmark results (generated)
+benchmark/results/*.json
+
+# Generated manifests (per-project)
+reference/steering/CODEBASE.md
