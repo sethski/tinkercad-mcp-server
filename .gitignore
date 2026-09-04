@@ -3,6 +3,8 @@ node_modules/
 dist/
 .next/
 *.lock
+.env
+.env.*
 
 # OS files
 .DS_Store
@@ -25,3 +27,7 @@ benchmark/results/*.json
 
 # Generated manifests (per-project)
 reference/steering/CODEBASE.md
+
+# Playwright persistent profile and probe dumps
+.browser-profile/
+docs/spike-probe-last.json

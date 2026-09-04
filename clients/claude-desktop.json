@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tinkercad-circuits": {
+      "command": "node",
+      "args": ["REPLACE_WITH_FULL_PATH_TO_dist/index.js"]
+    }
+  }
+}

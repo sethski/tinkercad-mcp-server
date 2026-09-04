@@ -1,0 +1,43 @@
+{
+  "url": "https://www.tinkercad.com/things/sampleblink/editel",
+  "title": "Arduino LED Blink",
+  "loggedIn": true,
+  "editorReady": true,
+  "simulationRunning": false,
+  "code": "void setup() {\n  pinMode(13, OUTPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  digitalWrite(13, HIGH);\n  Serial.println(\"HIGH\");\n  delay(1000);\n  digitalWrite(13, LOW);\n  Serial.println(\"LOW\");\n  delay(1000);\n}\n",
+  "serial": "",
+  "components": [
+    {
+      "id": "uno",
+      "name": "Arduino Uno R3",
+      "type": "arduino_uno_r3",
+      "x": 220,
+      "y": 220,
+      "pins": ["D13", "GND"],
+      "attributes": {}
+    },
+    {
+      "id": "led1",
+      "name": "LED",
+      "type": "led",
+      "x": 520,
+      "y": 220,
+      "pins": ["anode", "cathode"],
+      "attributes": { "color": "red" }
+    },
+    {
+      "id": "r1",
+      "name": "Resistor",
+      "type": "resistor",
+      "x": 520,
+      "y": 340,
+      "pins": ["pin1", "pin2"],
+      "attributes": { "resistance": "220" }
+    }
+  ],
+  "wires": [
+    { "id": "w1", "from": "uno.D13", "to": "led1.anode" },
+    { "id": "w2", "from": "led1.cathode", "to": "r1.pin1" },
+    { "id": "w3", "from": "r1.pin2", "to": "uno.GND" }
+  ]
+}

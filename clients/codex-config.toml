@@ -1,0 +1,6 @@
+# Merge into ~/.codex/config.toml (or the project Codex config).
+# Replace the args path with your real dist/index.js (forward slashes).
+
+[mcp_servers.tinkercad-circuits]
+command = "node"
+args = ["REPLACE_WITH_FULL_PATH_TO_dist/index.js"]

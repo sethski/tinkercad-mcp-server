@@ -1,0 +1,34 @@
+{
+  "name": "tinkercad-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server that drives Tinkercad Circuits through a persistent Playwright browser session",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "tinkercad-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc && node scripts/copy-injected.mjs",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "spike": "tsx scripts/spike-probe.ts",
+    "e2e": "tsx scripts/e2e-blink.ts",
+    "test": "tsx --test src/catalog.test.ts src/services/format.test.ts src/tools/register.test.ts src/eval-answers.test.ts",
+    "list-tools": "tsx scripts/list-tools.ts",
+    "inspector": "npx @modelcontextprotocol/inspector node dist/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.1",
+    "playwright": "^1.55.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

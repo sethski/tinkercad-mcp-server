@@ -1,0 +1,42 @@
+<evaluation>
+  <qa_pair>
+    <question>Using only the local Tinkercad Circuits component catalog, what catalog id should be passed to add a part when the user asks for an HC-SR04 distance sensor? Reply with the id only.</question>
+    <answer>ultrasonic</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>In the local component catalog, what exact search string is used in the Tinkercad parts panel for the Arduino board that exposes pin D13? Reply with the search string only.</question>
+    <answer>Arduino Uno R3</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>How many default pins does the catalog entry for a micro servo list? Reply with a single integer.</question>
+    <answer>3</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Which catalog id is the alias "ldr" mapped to? Reply with the id only.</question>
+    <answer>photoresistor</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>On the open Arduino LED Blink sample circuit, how many discrete components sit on the breadboard canvas? Reply with a single integer.</question>
+    <answer>3</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>On the open Arduino LED Blink sample circuit, what resistance value in ohms is set on the current-limiting resistor? Reply with the number only.</question>
+    <answer>220</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>On the open Arduino LED Blink sample circuit, what color is assigned to the LED? Reply with the color word only.</question>
+    <answer>red</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>On the open Arduino LED Blink sample circuit, which Arduino digital pin number drives the LED anode? Reply with the integer pin number only.</question>
+    <answer>13</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>In the Arduino sketch loaded on the open Arduino LED Blink sample circuit, what baud rate is passed to Serial.begin? Reply with the integer only.</question>
+    <answer>9600</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>In the Arduino sketch loaded on the open Arduino LED Blink sample circuit, how many milliseconds does each HIGH or LOW delay last? Reply with the integer only.</question>
+    <answer>1000</answer>
+  </qa_pair>
+</evaluation>

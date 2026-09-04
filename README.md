@@ -1,89 +1,184 @@
-# Counterpoint
+# Tinkercad Circuits MCP
 
-A Cursor Agent Harness for critical reasoning.
+Let Cursor, Claude, or Codex build circuits in [Tinkercad Circuits](https://www.tinkercad.com/circuits): place parts, wire pins, write Arduino code, run the simulator, and read the serial monitor.
 
-Clone this repository, open it in Cursor, and your AI assistant starts thinking adversarially about high-stakes decisions instead of agreeably producing the first reasonable answer.
+Tinkercad has no public API. This server opens a real Chrome window, keeps you logged in, and drives the editor for the AI.
 
-## What it does
+## What you need
 
-Counterpoint transforms Cursor's reasoning through three tiers:
+- [Node.js 18+](https://nodejs.org/)
+- A free [Tinkercad / Autodesk](https://www.tinkercad.com/) account
+- Git, if you are cloning this repo
 
-| Tier | When | Behavior |
-|------|------|----------|
-| **Ponytail** | Simple, low-stakes tasks | Fast and direct. No ceremony. |
-| **Poteto** | Complex but routine work | Structured plan-first approach. |
-| **Counterpoint** | High-stakes decisions | Multi-perspective adversarial reasoning. Surfaces trade-offs. Picks a winner. |
+## Setup (do this once)
 
-The harness automatically classifies queries by complexity and stakes, routing to the appropriate tier. You can also override manually.
-
-## Quick start
+### 1. Get the code
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/counterpoint.git
-cd counterpoint
-# Open in Cursor — that's it.
+git clone https://github.com/sethski/tinkercad-mcp-server.git
+cd tinkercad-mcp-server
 ```
 
-The `.cursor/rules/counterpoint.mdc` rule activates automatically.
+### 2. Install and build
 
-## Manual triggers
-
-| Say this | Get this |
-|----------|----------|
-| `quick` / `just fix it` | Ponytail (fast, minimal) |
-| `poteto` / `structured` | Poteto (plan-first) |
-| `counterpoint` / `think harder` / `challenge this` | Counterpoint (adversarial reasoning) |
-
-## Slash commands
-
-| Command | Purpose |
-|---------|---------|
-| `/counterpoint` | Force counterpoint tier |
-| `/steelman [position]` | Strongest argument FOR a position |
-| `/challenge [claim]` | Find every way it could be wrong |
-| `/tensions` | Show active unresolved trade-offs |
-| `/revisit [topic]` | Re-examine a past decision |
-| `/calibrate` | Confidence audit of last response |
-
-## What makes counterpoint responses different
-
-Instead of:
-> "That's a great approach! Here's how to implement it..."
-
-You get:
-> "This decision involves a trade-off between X and Y. The strongest case for X is [evidence]. The strongest case for Y is [evidence]. X wins because [specific reason]. This sacrifices [what you lose]. Revisit if [condition changes]."
-
-## Tuning
-
-Edit `.cursor/harness/knobs.md` to adjust:
-- Word-count thresholds for tier classification
-- Maximum perspectives per query (default: 4)
-- Verbosity level (synthesis / transparent / tensions-only)
-- Stakes detection keywords
-- Auto-escalation behavior
-
-## Adding custom perspectives
-
-Drop a markdown file in `.cursor/harness/plugins/`. See the [plugin format](/.cursor/harness/plugins/README.md) and existing examples (regulatory, DX, data integrity).
-
-## Architecture
-
-```
-.cursor/
-    rules/counterpoint.mdc     → Always-on router
-    harness/                   → Reasoning protocols and configuration
-    prompts/                   → Slash commands
-reference/                     → Session memory and project context
-benchmark/                     → Evaluation fixtures
-docs/                          → Philosophy, usage, extending
+```bash
+npm install
+npx playwright install chromium
+npm run build
 ```
 
-See [docs/USAGE.md](docs/USAGE.md) for detailed usage and [docs/PHILOSOPHY.md](docs/PHILOSOPHY.md) for design principles.
+`npm run build` creates `dist/index.js`. That file is what Cursor, Claude, and Codex will launch.
 
-## Credits
+### 3. Sign in to Tinkercad
 
-Built on [Afro](https://github.com/Troy-LL/Afro) (routing, knobs, session memory) and [Ponytail](https://github.com/DietrichGebert/ponytail) (YAGNI ladder).
+```bash
+npm start
+```
+
+A Chrome window opens. Sign in with your Autodesk account, then close the terminal with Ctrl+C.
+
+You only do this once. The login is saved in `.browser-profile/` (not committed to git). Later, the MCP server reuses that session.
+
+If `npm start` says you are not logged in, leave Chrome open, finish sign-in, and run `npm start` again. Or from the AI, call `tinkercad_login_status`.
+
+### 4. Copy your server path
+
+You need the **full path** to `dist/index.js`.
+
+- Windows example: `C:/Users/you/tinkercad-mcp-server/dist/index.js`
+- macOS / Linux example: `/Users/you/tinkercad-mcp-server/dist/index.js`
+
+In the configs below, replace `REPLACE_WITH_FULL_PATH_TO_dist/index.js` with that path. Use forward slashes even on Windows.
+
+### 5. Connect an AI client
+
+Pick the app you use. You can add more than one.
+
+#### Cursor
+
+1. Open Cursor Settings → MCP
+2. Or create `.cursor/mcp.json` in this project (a template is already there)
+3. Paste:
+
+```json
+{
+  "mcpServers": {
+    "tinkercad-circuits": {
+      "command": "node",
+      "args": ["REPLACE_WITH_FULL_PATH_TO_dist/index.js"]
+    }
+  }
+}
+```
+
+4. Save, then reload MCP servers (or restart Cursor)
+5. Confirm `tinkercad-circuits` is on and lists tools
+
+#### Claude Desktop
+
+1. Open the Claude Desktop config file:
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+2. Merge the `mcpServers` block from [`clients/claude-desktop.json`](clients/claude-desktop.json)
+3. Put your real `dist/index.js` path in `args`
+4. Restart Claude Desktop
+
+#### Codex
+
+1. Open `~/.codex/config.toml` (or your project Codex config)
+2. Copy [`clients/codex-config.toml`](clients/codex-config.toml)
+3. Put your real `dist/index.js` path in `args`
+4. Restart Codex
+
+### 6. Check that it works
+
+From this folder:
+
+```bash
+npm run list-tools
+```
+
+You should see 17 tools, including `tinkercad_login_status` and `tinkercad_build_circuit`.
+
+Then in Cursor / Claude / Codex, ask:
+
+> Check Tinkercad login status, then open a new circuit.
+
+If login is missing, sign in in the Chrome window that appears and ask again.
+
+## First circuit to try
+
+Ask the AI:
+
+> Build a blink circuit in Tinkercad: Arduino Uno, red LED, 220 ohm resistor. Wire D13 to the LED anode, LED cathode to the resistor, resistor to GND. Write blink code that also prints HIGH/LOW to serial, start the simulation, and read the serial monitor.
+
+That uses `tinkercad_open_circuit`, `tinkercad_build_circuit` (or the smaller tools), `tinkercad_start_simulation`, and `tinkercad_read_serial`.
+
+Keep Chrome visible the first few times so you can see parts land on the canvas.
+
+## Tools
+
+| What you want | Tool |
+|---|---|
+| Am I signed in? | `tinkercad_login_status` |
+| Open or create a circuit | `tinkercad_open_circuit` (`target` = URL, thing id, or `new`) |
+| See parts, wires, code | `tinkercad_get_circuit` |
+| Screenshot the editor | `tinkercad_screenshot` |
+| Known part names | `tinkercad_list_components` |
+| Add / move / delete a part | `tinkercad_add_component`, `tinkercad_move_component`, `tinkercad_delete_component` |
+| Wire or unwire | `tinkercad_connect_pins`, `tinkercad_delete_wire` |
+| Resistance, color, etc. | `tinkercad_set_component_attribute` |
+| Read or write Arduino code | `tinkercad_get_code`, `tinkercad_set_code` |
+| Run / stop sim, read serial | `tinkercad_start_simulation`, `tinkercad_stop_simulation`, `tinkercad_read_serial` |
+| Place, wire, and code in one go | `tinkercad_build_circuit` |
+
+Pin names look like `uno.D13` or `led1.anode`. Call `tinkercad_get_circuit` after placing parts so you use real ids.
+
+## Optional settings
+
+| Variable | Meaning |
+|---|---|
+| `TINKERCAD_PROFILE_DIR` | Chrome profile folder (default: `.browser-profile/` in this repo) |
+| `TINKERCAD_SCREENSHOT_DIR` | Where screenshots are saved |
+| `TINKERCAD_HEADED=0` | Hide Chrome after you have already logged in. First login should stay headed. |
+
+## Extra commands
+
+```bash
+npm test              # unit tests, no Tinkercad login
+npm run list-tools    # stdio handshake, same as Cursor/Claude/Codex
+npm run spike         # dump what the live page exposes
+npm run e2e           # live blink circuit (needs login)
+npm run inspector     # MCP Inspector UI
+```
+
+## How it works
+
+```
+Cursor / Claude / Codex
+        │  stdio
+        ▼
+tinkercad-mcp-server (Node)
+        │  Playwright
+        ▼
+Chrome (saved login) → tinkercad.com Circuits editor
+```
+
+Details of what is scriptable: [docs/spike-findings.md](docs/spike-findings.md).
+
+Autodesk can change the editor HTML. Selector updates stay in `src/services/editor-bridge.ts` and `src/injected/`.
+
+## Limits
+
+- Circuits only (3D design and Codeblocks are not in this version)
+- You must stay logged in; there is no official Autodesk API key
+- Place and wire are UI automation, so they can break when Tinkercad ships a new editor
+- One Chrome profile at a time; do not commit `.browser-profile/`
+
+## Evaluations
+
+Read-only questions live in [evaluations/tinkercad-circuits.xml](evaluations/tinkercad-circuits.xml). Catalog questions work with no circuit open. Circuit questions assume [evaluations/SAMPLE_CIRCUIT.md](evaluations/SAMPLE_CIRCUIT.md).
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
