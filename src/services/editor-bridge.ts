@@ -894,27 +894,53 @@ async function applyInspectorField(
   parsedUnit: ParsedUnitValue | undefined
 ): Promise<boolean> {
   const inspector = page.locator(".inspector:not(.hidden)").first();
-  const unitSelect = inspector.locator("select.js-unit_select").first();
-  const hasUnitSelect = await unitSelect.isVisible().catch(() => false);
 
-  // If targeting resistance / unit-bearing field and a unit selector exists, handle both input + unit dropdown.
-  if (hasUnitSelect && (/resist|capacit|induct|value/i.test(fieldLower))) {
-    const valueInputs = inspector.locator("input.js-valueInput, input[type='text'], input[type='number']");
-    const inputCount = await valueInputs.count();
-    const targetInput = inputCount >= 2 ? valueInputs.nth(1) : valueInputs.first();
-    if (await targetInput.isVisible().catch(() => false)) {
+  // Tinkercad renders every inspector property in a .dual_inspector row with .dual_inspector__label.
+  const rows = inspector.locator(".dual_inspector");
+  const rowCount = await rows.count().catch(() => 0);
+  for (let i = 0; i < rowCount; i += 1) {
+    const row = rows.nth(i);
+    const labelText = ((await row.locator(".dual_inspector__label").first().textContent().catch(() => "")) ?? "").trim().toLowerCase();
+    if (!labelText) {
+      continue;
+    }
+    const matchesField =
+      labelText === fieldLower ||
+      labelText.includes(fieldLower) ||
+      fieldLower.includes(labelText) ||
+      (fieldLower === "colour" && labelText === "color");
+    if (!matchesField) {
+      continue;
+    }
+
+    const rowInput = row.locator("input").first();
+    const rowSelect = row.locator("select").first();
+    const hasInput = await rowInput.isVisible().catch(() => false);
+    const hasSelect = await rowSelect.isVisible().catch(() => false);
+
+    if (hasInput && hasSelect) {
       const numeric = parsedUnit?.numeric ?? rawValue;
-      await targetInput.click({ clickCount: 3 });
-      await targetInput.fill(numeric);
-      await targetInput.press("Enter");
+      await rowInput.click({ clickCount: 3 });
+      await rowInput.fill(numeric);
+      await rowInput.press("Enter");
       if (parsedUnit?.unit) {
-        await unitSelect.selectOption({ value: parsedUnit.unit }).catch(() => undefined);
+        await rowSelect.selectOption({ value: parsedUnit.unit }).catch(() => undefined);
       }
+      return true;
+    }
+    if (hasSelect) {
+      await selectOptionCaseInsensitive(rowSelect, rawValue);
+      return true;
+    }
+    if (hasInput) {
+      await rowInput.click({ clickCount: 3 });
+      await rowInput.fill(parsedUnit?.numeric ?? rawValue);
+      await rowInput.press("Enter");
       return true;
     }
   }
 
-  // Try matching by label inside the inspector first.
+  // Fallback: standard accessible label inside the inspector.
   const labeled = inspector.getByLabel(new RegExp(escapeRegExp(fieldLower), "i")).first();
   if (await labeled.isVisible().catch(() => false)) {
     const tag = await labeled.evaluate((el) => el.tagName.toLowerCase());
@@ -927,41 +953,6 @@ async function applyInspectorField(
     return true;
   }
 
-  // Handle Tinkercad's label-less inspector rows (e.g. Name is input[0], Color is first non-unit select).
-  if (fieldLower === "name") {
-    const nameInput = inspector.locator("input.js-valueInput, input[type='text']").first();
-    if (await nameInput.isVisible().catch(() => false)) {
-      await nameInput.click({ clickCount: 3 });
-      await nameInput.fill(rawValue);
-      await nameInput.press("Enter");
-      return true;
-    }
-  }
-
-  const nonUnitSelect = inspector.locator("select:not(.js-unit_select)").first();
-  if ((fieldLower === "color" || fieldLower === "colour" || fieldLower === "type" || fieldLower === "mode")
-    && await nonUnitSelect.isVisible().catch(() => false)) {
-    await selectOptionCaseInsensitive(nonUnitSelect, rawValue);
-    return true;
-  }
-
-  // Generic fallback: if value matches a non-unit select option, pick it; otherwise fill the last value input.
-  if (await nonUnitSelect.isVisible().catch(() => false)) {
-    const matched = await selectOptionCaseInsensitive(nonUnitSelect, rawValue).then(() => true).catch(() => false);
-    if (matched) {
-      return true;
-    }
-  }
-  const fallbackInput = inspector.locator("input.js-valueInput, input").last();
-  if (await fallbackInput.isVisible().catch(() => false)) {
-    await fallbackInput.click({ clickCount: 3 });
-    await fallbackInput.fill(parsedUnit?.numeric ?? rawValue);
-    await fallbackInput.press("Enter");
-    if (hasUnitSelect && parsedUnit?.unit) {
-      await unitSelect.selectOption({ value: parsedUnit.unit }).catch(() => undefined);
-    }
-    return true;
-  }
   return false;
 }
 
