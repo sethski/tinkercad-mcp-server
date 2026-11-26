@@ -22,7 +22,6 @@ import { getLastCircuitJson, getPage, gotoTinkercad } from "./browser.js";
 const LOGIN_URL_HINTS = ["signin", "login", "accounts.autodesk", "oauth"];
 const injectedDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "injected");
 const SCRAPE_CIRCUIT_JS = fs.readFileSync(path.join(injectedDir, "scrape-circuit.js"), "utf8");
-const SET_CODE_JS = fs.readFileSync(path.join(injectedDir, "set-code.js"), "utf8");
 
 interface ScrapedState {
   url: string;
@@ -210,9 +209,10 @@ function extractComponentsFromUnknown(data: unknown): { components: CircuitCompo
 
 export async function takeScreenshot(): Promise<{ path: string; base64: string }> {
   const page = await getPage();
-  fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+  fs.mkdirSync(SCREENSHOT_DIR, { recursive: true, mode: 0o700 });
   const filePath = path.join(SCREENSHOT_DIR, `circuit-${Date.now()}.png`);
   await page.screenshot({ path: filePath, fullPage: false });
+  fs.chmodSync(filePath, 0o600);
   const base64 = fs.readFileSync(filePath).toString("base64");
   return { path: filePath, base64 };
 }
@@ -309,7 +309,7 @@ export async function connectPins(fromRef: string, toRef: string): Promise<Circu
 
 export async function deleteWire(wireId: string): Promise<CircuitState> {
   const page = await getPage();
-  const wire = page.locator(`#${cssEscape(wireId)}, [data-wire="${wireId}"]`).first();
+  const wire = page.locator(`#${cssEscape(wireId)}, [data-wire=${JSON.stringify(wireId)}]`).first();
   if (await wire.isVisible().catch(() => false)) {
     await wire.click();
     await page.keyboard.press("Delete");
@@ -327,7 +327,7 @@ export async function setComponentAttribute(componentId: string, name: string, v
   await handle.click();
   await page.waitForTimeout(300);
 
-  const labeled = page.getByLabel(new RegExp(name, "i")).first();
+  const labeled = page.getByLabel(new RegExp(escapeRegExp(name), "i")).first();
   if (await labeled.isVisible().catch(() => false)) {
     await labeled.fill(value);
     await labeled.press("Enter");
@@ -373,7 +373,27 @@ export async function setCode(source: string): Promise<void> {
   await openCodePanel(page);
   await switchCodeMode(page, "Text");
 
-  const applied = await page.evaluate(`${SET_CODE_JS}(${JSON.stringify(source)})`);
+  const applied = await page.evaluate((next: string): string => {
+    const cmHost = document.querySelector(".CodeMirror") as (Element & { CodeMirror?: { setValue: (v: string) => void } }) | null;
+    if (cmHost?.CodeMirror) {
+      cmHost.CodeMirror.setValue(next);
+      return "codemirror";
+    }
+    const aceEl = document.querySelector(".ace_editor") as (Element & { env?: { editor?: { setValue: (v: string, pos?: number) => void } } }) | null;
+    if (aceEl?.env?.editor) {
+      aceEl.env.editor.setValue(next, -1);
+      return "ace";
+    }
+    const textarea = document.querySelector<HTMLTextAreaElement>("#CODE_EDITOR_ID textarea, .code_panel textarea");
+    if (textarea) {
+      textarea.focus();
+      textarea.value = next;
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+      textarea.dispatchEvent(new Event("change", { bubbles: true }));
+      return "textarea";
+    }
+    return "";
+  }, source);
 
 
   if (applied) {
@@ -469,7 +489,7 @@ async function switchCodeMode(page: Page, mode: string): Promise<void> {
   if (await dropdown.isVisible().catch(() => false)) {
     await dropdown.selectOption({ label: mode }).catch(async () => {
       await dropdown.click();
-      await page.getByRole("option", { name: new RegExp(mode, "i") }).first().click();
+      await page.getByRole("option", { name: new RegExp(escapeRegExp(mode), "i") }).first().click();
     });
     return;
   }
@@ -550,6 +570,10 @@ async function ensureEditor(page: Page): Promise<void> {
 
 function cssEscape(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export async function probeEditor(): Promise<ScrapedState> {

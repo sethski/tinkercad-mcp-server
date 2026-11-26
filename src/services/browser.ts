@@ -41,13 +41,13 @@ export async function launchBrowser(): Promise<Page> {
     return page;
   }
 
-  fs.mkdirSync(PROFILE_DIR, { recursive: true });
+  fs.mkdirSync(PROFILE_DIR, { recursive: true, mode: 0o700 });
   log(`Launching persistent Chrome profile at ${PROFILE_DIR}`);
 
   context = await chromium.launchPersistentContext(PROFILE_DIR, {
     headless: !HEADED,
     viewport: { width: 1440, height: 900 },
-    acceptDownloads: true,
+    acceptDownloads: false,
     args: ["--disable-blink-features=AutomationControlled"]
   });
 
@@ -68,12 +68,22 @@ export async function launchBrowser(): Promise<Page> {
   return page;
 }
 
+export function isAllowedTinkercadHost(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  return (
+    lower === "tinkercad.com" ||
+    lower.endsWith(".tinkercad.com") ||
+    lower === "autodesk.com" ||
+    lower.endsWith(".autodesk.com")
+  );
+}
+
 function attachNetworkCapture(browserContext: BrowserContext): void {
   browserContext.on("response", (response) => {
     void (async () => {
       try {
-        const url = response.url();
-        if (!url.includes("tinkercad") && !url.includes("autodesk")) {
+        const parsed = new URL(response.url());
+        if (parsed.protocol !== "https:" || !isAllowedTinkercadHost(parsed.hostname)) {
           return;
         }
         const contentType = response.headers()["content-type"] ?? "";
@@ -110,10 +120,33 @@ export async function gotoTinkercad(targetUrl: string): Promise<Page> {
   return active;
 }
 
+const THING_ID_PATTERN = /^[a-zA-Z0-9_-]{3,64}$/;
+
 export function resolveTinkercadUrl(targetUrl: string): string {
-  if (targetUrl.startsWith("http://") || targetUrl.startsWith("https://")) {
-    const parsed = new URL(targetUrl);
-    if (!parsed.hostname.endsWith("tinkercad.com") && !parsed.hostname.endsWith("autodesk.com")) {
+  const trimmed = targetUrl.trim();
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+    let parsed: URL;
+    try {
+      parsed = new URL(trimmed);
+    } catch {
+      throw new BridgeError(
+        `Invalid Tinkercad URL: ${trimmed}`,
+        "Pass an https://www.tinkercad.com circuit URL, a thing id, or 'new'."
+      );
+    }
+    if (parsed.protocol !== "https:") {
+      throw new BridgeError(
+        `Refusing non-HTTPS URL protocol: ${parsed.protocol}`,
+        "Use an https:// URL on tinkercad.com."
+      );
+    }
+    if (parsed.username || parsed.password) {
+      throw new BridgeError(
+        "Refusing URL with embedded credentials",
+        "Pass a clean tinkercad.com circuit URL."
+      );
+    }
+    if (!isAllowedTinkercadHost(parsed.hostname)) {
       throw new BridgeError(
         `Refusing to open non-Tinkercad URL: ${parsed.hostname}`,
         "Pass a tinkercad.com circuit URL or the word 'new'."
@@ -121,13 +154,32 @@ export function resolveTinkercadUrl(targetUrl: string): string {
     }
     return parsed.toString();
   }
-  if (targetUrl === "new" || targetUrl === "circuits") {
+  if (trimmed === "new" || trimmed === "circuits") {
     return CIRCUITS_DASHBOARD_URL;
   }
-  if (targetUrl.startsWith("/")) {
-    return `${TINKERCAD_ORIGIN}${targetUrl}`;
+  if (trimmed.startsWith("/")) {
+    if (trimmed.startsWith("//") || trimmed.includes("\\")) {
+      throw new BridgeError(
+        `Refusing unsafe relative path: ${trimmed}`,
+        "Pass a Tinkercad path like /things/<id>/editel or a thing id."
+      );
+    }
+    const parsed = new URL(trimmed, TINKERCAD_ORIGIN);
+    if (parsed.origin !== TINKERCAD_ORIGIN) {
+      throw new BridgeError(
+        `Refusing cross-origin relative path: ${trimmed}`,
+        "Pass a valid path on tinkercad.com."
+      );
+    }
+    return parsed.toString();
   }
-  return `${TINKERCAD_ORIGIN}/things/${targetUrl}/editel`;
+  if (!THING_ID_PATTERN.test(trimmed)) {
+    throw new BridgeError(
+      `Invalid Tinkercad thing id: "${trimmed}"`,
+      "Pass an alphanumeric thing id, a full https://www.tinkercad.com URL, or 'new'."
+    );
+  }
+  return `${TINKERCAD_ORIGIN}/things/${trimmed}/editel`;
 }
 
 export function profilePath(): string {
