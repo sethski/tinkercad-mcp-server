@@ -306,8 +306,7 @@ export async function addComponent(query: string, x: number, y: number): Promise
   await page.mouse.move(dropX, dropY, { steps: 10 });
   await page.waitForTimeout(150);
   await page.mouse.click(dropX, dropY);
-  await page.waitForTimeout(600);
-  await zoomToFit(page);
+  await page.waitForTimeout(650);
   const after = await inspectCircuit();
   if (after.components.length <= before.components.length) {
     after.components.push({
@@ -428,7 +427,7 @@ export async function setComponentAttribute(componentId: string, name: string, v
   const page = await getPage();
   await selectComponent(page, componentId);
 
-  const inspector = page.locator(".inspector").first();
+  const inspector = page.locator(".inspector:not(.hidden)").first();
   await inspector.waitFor({ state: "visible", timeout: 3000 }).catch(() => undefined);
   if (!(await inspector.isVisible().catch(() => false))) {
     throw new BridgeError(
@@ -756,42 +755,97 @@ async function getComponentScreenCenter(componentId: string): Promise<{ x: numbe
   return { x, y, component };
 }
 
-async function selectComponent(page: Page, componentId: string): Promise<CircuitComponent> {
-  await closeCodePanel(page);
-  const { x, y, component } = await getComponentScreenCenter(componentId);
-  await page.mouse.move(x, y);
-  await page.mouse.click(x, y);
-  await page.waitForTimeout(300);
-
-  const inspectorVisible = await page.locator(".inspector").first().isVisible().catch(() => false);
-  if (!inspectorVisible) {
-    await page.evaluate((targetId: string) => {
-      const ce = (window as unknown as {
-        circuit_editor?: {
-          circuitEditor?: {
-            data?: {
-              devices?: {
-                forEach: (cb: (d: {
-                  local_id?: string;
-                  versions_id?: string;
-                  breadboard?: () => { views?: { _content?: Record<string, { val?: { setSelected?: (v: boolean) => void; showInspector?: () => void } }> } };
-                }) => void) => void;
-              };
+async function getExactDeviceScreenCenter(page: Page, componentId: string): Promise<{ x: number; y: number; alreadySelected: boolean } | null> {
+  return page.evaluate((targetId: string) => {
+    const ce = (window as unknown as {
+      circuit_editor?: {
+        circuitEditor?: {
+          breadboardEditor?: { zoomGroup?: SVGGraphicsElement };
+          data?: {
+            devices?: {
+              forEach: (cb: (d: {
+                local_id?: string;
+                versions_id?: string;
+                breadboard?: () => {
+                  pos?: () => { x: number; y: number };
+                  views?: {
+                    _content?: Record<string, {
+                      val?: {
+                        selected?: boolean;
+                        symbolGroup?: { node?: Element } & Element;
+                        group?: { node?: Element } & Element;
+                        outerGroup?: { node?: Element } & Element;
+                      };
+                    }>;
+                  };
+                };
+              }) => void) => void;
             };
           };
         };
-      }).circuit_editor?.circuitEditor;
-      ce?.data?.devices?.forEach((d) => {
-        if (d.local_id === targetId || d.versions_id === targetId) {
-          const bbEl = typeof d.breadboard === "function" ? d.breadboard() : undefined;
-          const entries = Object.values(bbEl?.views?._content ?? {});
-          const view = entries[0]?.val;
-          view?.setSelected?.(true);
-          view?.showInspector?.();
+      };
+    }).circuit_editor?.circuitEditor;
+    const bb = ce?.breadboardEditor;
+    const ctm = bb?.zoomGroup?.getScreenCTM?.();
+    let result: { x: number; y: number; alreadySelected: boolean } | null = null;
+    ce?.data?.devices?.forEach((d) => {
+      if (result || (d.local_id !== targetId && d.versions_id !== targetId)) {
+        return;
+      }
+      const bbEl = typeof d.breadboard === "function" ? d.breadboard() : undefined;
+      const entries = Object.values(bbEl?.views?._content ?? {});
+      const view = entries[0]?.val;
+      const alreadySelected = Boolean(view?.selected);
+
+      const node = view?.symbolGroup?.node ?? view?.symbolGroup ?? view?.group?.node ?? view?.group ?? view?.outerGroup?.node ?? view?.outerGroup;
+      if (node && typeof node.getBoundingClientRect === "function") {
+        const rect = node.getBoundingClientRect();
+        if (rect.width > 4 && rect.height > 4) {
+          result = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2, alreadySelected };
+          return;
         }
-      });
-    }, component.id);
-    await page.waitForTimeout(250);
+      }
+      const pos = typeof bbEl?.pos === "function" ? bbEl.pos() : undefined;
+      if (pos && ctm) {
+        result = {
+          x: ctm.a * pos.x + ctm.c * pos.y + ctm.e,
+          y: ctm.b * pos.x + ctm.d * pos.y + ctm.f,
+          alreadySelected
+        };
+      }
+    });
+    return result;
+  }, componentId).catch(() => null);
+}
+
+async function selectComponent(page: Page, componentId: string): Promise<CircuitComponent> {
+  await closeCodePanel(page);
+  const { x: fallbackX, y: fallbackY, component } = await getComponentScreenCenter(componentId);
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const exact = await getExactDeviceScreenCenter(page, component.id);
+    const openInspector = page.locator(".inspector:not(.hidden)").first();
+    const inspectorOpen = await openInspector.isVisible().catch(() => false);
+    if (inspectorOpen) {
+      const title = ((await openInspector.locator(".inspector__title__text").first().textContent().catch(() => "")) ?? "").trim().toLowerCase();
+      if (exact?.alreadySelected || (title !== "" && (component.name.toLowerCase().includes(title) || title.includes(component.name.toLowerCase())))) {
+        return component;
+      }
+    }
+
+    if (attempt === 1) {
+      await zoomToFit(page);
+    }
+    const fresh = await getExactDeviceScreenCenter(page, component.id);
+    const clickX = fresh?.x ?? fallbackX;
+    const clickY = fresh?.y ?? fallbackY;
+    await page.mouse.move(clickX, clickY);
+    await page.mouse.click(clickX, clickY);
+    await page.waitForTimeout(350);
+
+    if (await openInspector.isVisible().catch(() => false)) {
+      return component;
+    }
   }
   return component;
 }
@@ -839,7 +893,7 @@ async function applyInspectorField(
   rawValue: string,
   parsedUnit: ParsedUnitValue | undefined
 ): Promise<boolean> {
-  const inspector = page.locator(".inspector").first();
+  const inspector = page.locator(".inspector:not(.hidden)").first();
   const unitSelect = inspector.locator("select.js-unit_select").first();
   const hasUnitSelect = await unitSelect.isVisible().catch(() => false);
 
@@ -1006,21 +1060,14 @@ async function firstVisible(page: Page, selectors: string[]): Promise<boolean> {
 }
 
 async function zoomToFit(page: Page): Promise<void> {
-  const clicked = await page.evaluate((): boolean => {
-    const btn = document.querySelector<HTMLElement>("#breadboardTab .js-zoomToFit, .js-zoomToFit");
-    if (btn) {
-      btn.click();
-      return true;
-    }
-    return false;
-  }).catch(() => false);
-  if (clicked) {
-    await page.waitForTimeout(350);
+  const hudBtn = page.locator(".viewcube__button.js-zoomToFit").first();
+  if (await hudBtn.isVisible().catch(() => false)) {
+    await hudBtn.click();
+    await page.waitForTimeout(600);
     return;
   }
-  await page.mouse.click(120, 140).catch(() => undefined);
   await page.keyboard.press("f").catch(() => undefined);
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(600);
 }
 
 async function ensureEditor(page: Page): Promise<void> {
