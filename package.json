@@ -14,7 +14,7 @@
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "spike": "tsx scripts/spike-probe.ts",
     "e2e": "tsx scripts/e2e-blink.ts",
-    "test": "tsx --test src/catalog.test.ts src/services/format.test.ts src/tools/register.test.ts src/eval-answers.test.ts",
+    "test": "tsx --test src/catalog.test.ts src/services/editor-bridge.test.ts src/services/format.test.ts src/tools/register.test.ts src/eval-answers.test.ts",
     "list-tools": "tsx scripts/list-tools.ts",
     "inspector": "npx @modelcontextprotocol/inspector node dist/index.js"
   },
